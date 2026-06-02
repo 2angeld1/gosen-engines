@@ -1,0 +1,36 @@
+[workspace]
+resolver = "2"
+members = [
+    "services/kitchy-router",
+    "libs/image-processor",
+    "libs/ai-orchestrator",
+    "services/verso-router"
+]
+
+[workspace.dependencies]
+# Tokio para concurrencia y asincronía
+tokio = { version = "1.38", features = ["full"] }
+
+# Axum para la API HTTP del router
+axum = { version = "0.7", features = ["multipart"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Cliente HTTP para llamadas a Gemini y Python
+reqwest = { version = "0.12", features = ["json", "multipart"] }
+base64 = "0.22"
+
+# Serialización y Deserialización de JSONs
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Procesamiento de Imágenes y Hashing
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+blake3 = "1.5"
+image_hasher = "3.1"
+
+# Base de datos SQLite para caché ultrarrápido
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite"] }
+
+# Logging y Observabilidad
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
