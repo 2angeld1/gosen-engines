@@ -7,6 +7,11 @@ mod cache;
 mod languages;
 mod parser;
 mod db;
+mod extract;
+mod analyze;
+mod business_rules;
+mod zombie;
+mod agent_rules;
 
 use axum::{Router, routing::{post, get}, Json, extract::State, http::StatusCode};
 use std::sync::Arc;
@@ -58,6 +63,11 @@ async fn main() {
         .route("/translate-repo", post(handle_translate_repo))
         .route("/detect", post(handle_detect))
         .route("/languages", get(handle_languages))
+        .route("/extract-ast", post(handle_extract))
+        .route("/analyze-smells", post(handle_analyze))
+        .route("/extract-business-rules", post(handle_business_rules))
+        .route("/detect-zombie-code", post(handle_zombie))
+        .route("/generate-agent-rules", post(handle_agent_rules))
         .route("/health", get(handle_health))
         .layer(tower_http::cors::CorsLayer::permissive())
         .with_state(state);
@@ -133,4 +143,82 @@ async fn handle_languages() -> Json<serde_json::Value> {
 
 async fn handle_health() -> Json<serde_json::Value> {
     Json(serde_json::json!({"status": "ok", "service": "verso-core"}))
+}
+
+async fn handle_extract(
+    Json(req): Json<extract::ExtractAstRequest>,
+) -> Json<extract::ExtractAstResponse> {
+    Json(extract::extract_ast(&req))
+}
+
+async fn handle_analyze(
+    Json(mut req): Json<analyze::AnalyzeRequest>,
+) -> Result<Json<analyze::AnalyzeResponse>, (StatusCode, Json<serde_json::Value>)> {
+    if req.gemini_key.is_none() {
+        req.gemini_key = std::env::var("GEMINI_API_KEY").ok();
+    }
+    if req.cohere_key.is_none() {
+        req.cohere_key = std::env::var("COHERE_API_KEY").ok();
+    }
+    match analyze::run(req).await {
+        Ok(resp) => Ok(Json(resp)),
+        Err(e) => Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(serde_json::json!({"error": e})),
+        )),
+    }
+}
+
+async fn handle_business_rules(
+    Json(mut req): Json<business_rules::BusinessRulesRequest>,
+) -> Result<Json<business_rules::BusinessRulesResponse>, (StatusCode, Json<serde_json::Value>)> {
+    if req.gemini_key.is_none() {
+        req.gemini_key = std::env::var("GEMINI_API_KEY").ok();
+    }
+    if req.cohere_key.is_none() {
+        req.cohere_key = std::env::var("COHERE_API_KEY").ok();
+    }
+    match business_rules::run(req).await {
+        Ok(resp) => Ok(Json(resp)),
+        Err(e) => Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(serde_json::json!({"error": e})),
+        )),
+    }
+}
+
+async fn handle_zombie(
+    Json(mut req): Json<zombie::ZombieRequest>,
+) -> Result<Json<zombie::ZombieResponse>, (StatusCode, Json<serde_json::Value>)> {
+    if req.gemini_key.is_none() {
+        req.gemini_key = std::env::var("GEMINI_API_KEY").ok();
+    }
+    if req.cohere_key.is_none() {
+        req.cohere_key = std::env::var("COHERE_API_KEY").ok();
+    }
+    match zombie::run(req).await {
+        Ok(resp) => Ok(Json(resp)),
+        Err(e) => Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(serde_json::json!({"error": e})),
+        )),
+    }
+}
+
+async fn handle_agent_rules(
+    Json(mut req): Json<agent_rules::AgentRulesRequest>,
+) -> Result<Json<agent_rules::AgentRulesResponse>, (StatusCode, Json<serde_json::Value>)> {
+    if req.gemini_key.is_none() {
+        req.gemini_key = std::env::var("GEMINI_API_KEY").ok();
+    }
+    if req.cohere_key.is_none() {
+        req.cohere_key = std::env::var("COHERE_API_KEY").ok();
+    }
+    match agent_rules::run(req).await {
+        Ok(resp) => Ok(Json(resp)),
+        Err(e) => Err((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(serde_json::json!({"error": e})),
+        )),
+    }
 }

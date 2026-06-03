@@ -4,7 +4,7 @@ pub struct LanguageDetector {
     parsers: Vec<(&'static str, Parser)>,
 }
 
-fn get_language(name: &str) -> Option<Language> {
+pub fn get_language(name: &str) -> Option<Language> {
     match name {
         "PHP" => Some(tree_sitter_php::LANGUAGE_PHP.into()),
         "Python" => Some(tree_sitter_python::LANGUAGE.into()),
