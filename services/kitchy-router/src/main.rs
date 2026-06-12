@@ -1,6 +1,6 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{StatusCode, HeaderMap},
     routing::{get, post},
     Json, Router,
 };
@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 2. Cargar variables de entorno
     let gemini_api_key = std::env::var("GEMINI_API_KEY")
-        .expect("MANDATORIO: Configurar GEMINI_API_KEY en variables de entorno o archivo .env");
+        .unwrap_or_default();
     let caitlyn_url = std::env::var("CAITLYN_URL")
         .unwrap_or_else(|_| "http://localhost:8000".to_string());
     let port = std::env::var("PORT")
@@ -82,9 +82,28 @@ async fn health_check() -> &'static str {
 /// Handler principal para el procesamiento de facturas
 async fn process_invoice_handler(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<InvoiceRequest>,
 ) -> Result<Json<OrchestrationResult>, (StatusCode, Json<Value>)> {
     let negocio_tipo = payload.negocio_tipo.unwrap_or_else(|| "GASTRONOMIA".to_string());
+
+    // 0. Extraer la API Key de Gemini desde la cabecera, con fallback al AppState
+    let gemini_api_key = headers
+        .get("x-gemini-key")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| state.gemini_api_key.clone());
+
+    if gemini_api_key.trim().is_empty() {
+        error!("Error: GEMINI_API_KEY no provista en las variables de entorno ni en la cabecera x-gemini-key");
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "success": false,
+                "error": "Falta configurar la clave de API de Gemini. Envíala en la cabecera HTTP 'x-gemini-key' o configúrala en el entorno de Rust."
+            })),
+        ));
+    }
 
     // 1. Decodificar la imagen base64 original
     let raw_image_bytes = match decode_base64(&payload.imagen) {
@@ -162,7 +181,7 @@ async fn process_invoice_handler(
 
     // Ejecutar carrera de modelos paralelos
     let gemini_result = race_gemini_models(
-        state.gemini_api_key.clone(),
+        gemini_api_key,
         webp_base64.clone(),
         system_prompt,
     )
