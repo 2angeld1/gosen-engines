@@ -2,14 +2,14 @@
 ARG SERVICE=kitchy-router
 
 # Stage 1: Generar la receta de dependencias con cargo-chef
-FROM lukemathieson/cargo-chef:latest-rust-1-slim AS planner
+FROM lucacarraro/cargo-chef:latest-rust-1-slim AS planner
 ARG SERVICE
 WORKDIR /app
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 # Stage 2: Compilar las dependencias basándose en la receta generada
-FROM lukemathieson/cargo-chef:latest-rust-1-slim AS builder
+FROM lucacarraro/cargo-chef:latest-rust-1-slim AS builder
 ARG SERVICE
 WORKDIR /app
 COPY --from=planner /app/recipe.json recipe.json
