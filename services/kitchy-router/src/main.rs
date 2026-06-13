@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{State, DefaultBodyLimit},
     http::{StatusCode, HeaderMap},
     routing::{get, post},
     Json, Router,
@@ -62,6 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/agent/invoice", post(process_invoice_handler))
+        .layer(DefaultBodyLimit::max(20 * 1024 * 1024)) // Límite de 20MB para imágenes base64 grandes
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state);
